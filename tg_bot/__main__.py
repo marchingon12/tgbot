@@ -19,18 +19,19 @@ from tg_bot.modules.helper_funcs.chat_status import is_user_admin
 from tg_bot.modules.helper_funcs.misc import paginate_modules
 
 PM_START_TEXT = """
-Hi {}, my name is {}! If you have any questions on how to use me, read /help - and then head to @MarieSupport.
+
+
+Hi {}, my name is {}! I'm a fork of Marie for the Aurora groups. Find the main group [here](https://t.me/AuroraSupport)
 
 I'm a group manager bot built in python3, using the python-telegram-bot library, and am fully opensource; \
-you can find what makes me tick [here](github.com/PaulSonOfLars/tgbot)!
+you can find what makes me tick [here](https://github.com/nitanmarcel/tgbot)!
 
-Feel free to submit pull requests on github, or to contact my support group, @MarieSupport, with any bugs, questions \
-or feature requests you might have :)
-I also have a news channel, @MarieNews for announcements on new features, downtime, etc.
+If you are interested about the original project you can find it [here](https://github.com/PaulSonOfLars/tgbot)
+
 
 You can find the list of available commands with /help.
 
-If you're enjoying using me, and/or would like to help me survive in the wild, hit /donate to help fund/upgrade my VPS!
+If you're enjoying me please make sure you hit /donate and help the original creator of my source code to help him fund/upgrade his VPS!
 """
 
 HELP_STRINGS = """
@@ -477,7 +478,7 @@ def main():
 
     if WEBHOOK:
         LOGGER.info("Using webhooks.")
-        updater.start_webhook(listen="127.0.0.1",
+        updater.start_webhook(listen="0.0.0.0",
                               port=PORT,
                               url_path=TOKEN)
 
