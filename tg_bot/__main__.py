@@ -1,6 +1,9 @@
+import threading
 import datetime
 import importlib
 import re
+import os
+import sys
 from typing import Optional, List
 
 from telegram import Message, Chat, Update, Bot, User
@@ -16,7 +19,7 @@ from tg_bot import dispatcher, updater, TOKEN, WEBHOOK, OWNER_ID, DONATION_LINK,
 # NOTE: Module order is not guaranteed, specify that in the config file!
 from tg_bot.modules import ALL_MODULES
 from tg_bot.modules.helper_funcs.chat_status import is_user_admin
-from tg_bot.modules.helper_funcs.misc import paginate_modules
+from tg_bot.modules.helper_funcs.misc import paginate_modules, user_bot_owner
 
 PM_START_TEXT = """
 
@@ -155,6 +158,15 @@ def start(bot: Bot, update: Update, args: List[str]):
     else:
         update.effective_message.reply_text("Yo, whadup?")
 
+
+def stop_and_restart():
+    updater.stop()
+    os.execl(sys.executable, sys.executable, *sys.argv)
+
+@user_bot_owner
+def restart(bot, update):
+    update.effective_message.reply_text("Bot is restarting...")
+    threading.Thread(target=stop_and_restart).start()
 
 # for test purposes
 def error_callback(bot, update, error):
@@ -450,6 +462,7 @@ def is_chat_allowed(bot, update):
 def main():
     test_handler = CommandHandler("test", test)
     start_handler = CommandHandler("start", start, pass_args=True)
+    restart_handler = CommandHandler("restart", restart)
 
     help_handler = CommandHandler("help", get_help)
     help_callback_handler = CallbackQueryHandler(help_button, pattern=r"help_")
@@ -463,6 +476,7 @@ def main():
 
     # dispatcher.add_handler(test_handler)
     dispatcher.add_handler(start_handler)
+    dispatcher.add_handler(restart_handler)
     dispatcher.add_handler(help_handler)
     dispatcher.add_handler(settings_handler)
     dispatcher.add_handler(help_callback_handler)

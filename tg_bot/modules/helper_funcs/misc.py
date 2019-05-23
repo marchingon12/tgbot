@@ -1,10 +1,11 @@
 from math import ceil
+from functools import wraps
 from typing import List, Dict
 
-from telegram import MAX_MESSAGE_LENGTH, InlineKeyboardButton, Bot, ParseMode
+from telegram import MAX_MESSAGE_LENGTH, InlineKeyboardButton, Bot, ParseMode, Chat, User, Update
 from telegram.error import TelegramError
 
-from tg_bot import LOAD, NO_LOAD
+from tg_bot import LOAD, NO_LOAD, OWNER_ID
 
 
 class EqInlineKeyboardButton(InlineKeyboardButton):
@@ -107,3 +108,14 @@ def revert_buttons(buttons):
 
 def is_module_loaded(name):
     return (not LOAD or name in LOAD) and name not in NO_LOAD
+
+
+def user_bot_owner(func):
+    @wraps(func)
+    def is_user_bot_owner(bot: Bot, update: Update, *args, **kwargs):
+        user = update.effective_user
+        if user and user.id == OWNER_ID:
+            return func(bot, update, *args, **kwargs)
+        else:
+            pass
+    return is_user_bot_owner
