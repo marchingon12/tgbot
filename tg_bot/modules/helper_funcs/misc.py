@@ -114,8 +114,8 @@ def user_bot_owner(func):
     @wraps(func)
     def is_user_bot_owner(bot: Bot, update: Update, *args, **kwargs):
         user = update.effective_user
-        if user and user.id == OWNER_ID:
+        if user.id == OWNER_ID:
             return func(bot, update, *args, **kwargs)
         else:
-            pass
+            update.effective_message.reply_text("Only the owner of this bot can execute this command!")
     return is_user_bot_owner
