@@ -16,6 +16,23 @@ class Types(IntEnum):
     VOICE = 6
     VIDEO = 7
 
+def parse_datatype_int(int_type):
+    if int_type == 0:
+        return Types.TEXT
+    if int_type == 1:
+        return Types.BUTTON_TEXT
+    if int_type == 2:
+        return Types.STICKER
+    if int_type == 3:
+        return Types.DOCUMENT
+    if int_type == 4:
+        return Types.PHOTO
+    if int_type == 5:
+        return Types.AUDIO
+    if int_type == 6:
+        return Types.VOICE
+    if int_type == 7:
+        return Types.VIDEO
 
 def get_note_type(msg: Message):
     data_type = None

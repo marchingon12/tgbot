@@ -27,6 +27,14 @@ class Notes(BASE):
     def __repr__(self):
         return "<Note %s>" % self.name
 
+    def to_dict(self):
+        return {
+            "chatid": self.chat_id,
+            "name": self.name,
+            "value": self.value,
+            "msgtype": self.msgtype,
+            "file": self.file}
+
 
 class Buttons(BASE):
     __tablename__ = "note_urls"

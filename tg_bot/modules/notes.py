@@ -1,3 +1,5 @@
+import json
+import os
 import re
 from io import BytesIO
 from typing import Optional, List
@@ -13,8 +15,9 @@ import tg_bot.modules.sql.notes_sql as sql
 from tg_bot import dispatcher, MESSAGE_DUMP, LOGGER
 from tg_bot.modules.disable import DisableAbleCommandHandler
 from tg_bot.modules.helper_funcs.chat_status import user_admin
-from tg_bot.modules.helper_funcs.misc import build_keyboard, revert_buttons
-from tg_bot.modules.helper_funcs.msg_types import get_note_type
+from tg_bot.modules.helper_funcs.misc import build_keyboard, revert_buttons, user_bot_owner
+from tg_bot.modules.helper_funcs.msg_types import get_note_type, parse_datatype_int
+from tg_bot.modules.helper_funcs.string_handling import button_markdown_parser
 
 FILE_MATCHER = re.compile(r"^###file_id(!photo)?###:(.*?)(?:\s|$)")
 
@@ -138,10 +141,10 @@ def save(bot: Bot, update: Update):
     if data_type is None:
         msg.reply_text("Dude, there's no note")
         return
-    
+
     if len(text.strip()) == 0:
         text = note_name
-        
+
     sql.add_note_to_db(chat_id, note_name, text, data_type, buttons=buttons, file=content)
 
     msg.reply_text(
@@ -194,6 +197,64 @@ def list_notes(bot: Bot, update: Update):
         update.effective_message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
 
+@run_async
+@user_bot_owner
+def export_notes(bot: Bot, update: Update):
+    chat_id = update.effective_chat.id
+    notes = sql.get_all_chat_notes(chat_id)
+    notes_dict = {}
+    notes_file = "notes_export.json"
+    msg = update.effective_message.reply_text("Exporting chat notes")
+    if os.path.isfile(notes_file):
+        with open(notes_file, 'r') as f:
+            try:
+                notes_dict = json.loads(f.read())
+            except json.JSONDecodeError:
+                notes_dict = {}
+    exported = []
+    for note in notes:
+        _dict = note.to_dict()
+        buttons = sql.get_buttons(chat_id, note.name)
+        _dict["value"] += revert_buttons(buttons)
+        exported.append(_dict)
+    notes_dict[chat_id] = exported
+    with open(notes_file, 'w+') as f:
+        f.write(json.dumps(notes_dict))
+    update.effective_message.reply_document(document=open(notes_file, 'rb'), file_name=notes_file, caption="Here are all the notes exported from this chat")
+    msg.delete()
+
+@run_async
+@user_bot_owner
+def import_notes(bot: Bot, update: Update):
+    chat_id = update.effective_chat.id
+    notes_file = "notes_export.json"
+    msg = update.effective_message.reply_text("Importing notes from backup.")
+    args = update.effective_message.text.split()
+    if len(args) > 1:
+        chat_id = args
+    with open(notes_file, 'r') as f:
+        try:
+            notes_dict = json.loads(f.read())
+        except json.JSONDecodeError:
+            update.effective_message.reply("Failed to decode json. Please try to export chat notes again.")
+            msg.delete()
+            return
+    try:
+        notes_list = notes_dict[str(chat_id)]
+    except KeyError:
+        msg.delete()
+        update.effective_message.reply_text(f"Failed to import notes as {chat_id} couldn't be found it the backup file")
+        return
+    for note in notes_list:
+        buttons = []
+        text = ""
+        if note["value"]:
+            text, buttons = button_markdown_parser(note["value"])
+        data_type = parse_datatype_int(note["msgtype"])
+        sql.add_note_to_db(update.effective_chat.id, note["name"], text, data_type, buttons=buttons, file=note["file"])
+    msg.delete()
+    update.effective_message.reply_text("All notes imported with no errors")
+
 def __import_data__(chat_id, data):
     failures = []
     for notename, notedata in data.get('extra', {}).items():
@@ -243,6 +304,8 @@ A button can be added to a note by using standard markdown link syntax - the lin
 `buttonurl:` section, as such: `[somelink](buttonurl:example.com)`. Check /markdownhelp for more info.
  - /save <notename>: save the replied message as a note with name notename
  - /clear <notename>: clear note with this name
+ - /export: export notes from the current chat
+ - /import <chat_id?>: . Import chat notes from a backup json file. If an id is specified will import the notes from the respective chat id `/import -100xxxxxx`
 """
 
 __mod_name__ = "Notes"
@@ -255,8 +318,13 @@ DELETE_HANDLER = CommandHandler("clear", clear, pass_args=True)
 
 LIST_HANDLER = DisableAbleCommandHandler(["notes", "saved"], list_notes, admin_ok=True)
 
+EXPORT_HANDLER = CommandHandler("noteexport", export_notes)
+IMPORT_HANDLER = CommandHandler("noteimport", import_notes)
+
 dispatcher.add_handler(GET_HANDLER)
 dispatcher.add_handler(SAVE_HANDLER)
 dispatcher.add_handler(LIST_HANDLER)
 dispatcher.add_handler(DELETE_HANDLER)
 dispatcher.add_handler(HASH_GET_HANDLER)
+dispatcher.add_handler(EXPORT_HANDLER)
+dispatcher.add_handler(IMPORT_HANDLER)
