@@ -220,8 +220,8 @@ def export_notes(bot: Bot, update: Update):
     notes_dict[chat_id] = exported
     with open(notes_file, 'w+') as f:
         f.write(json.dumps(notes_dict))
-    update.effective_message.reply_document(document=open(notes_file, 'rb'), file_name=notes_file, caption="Here are all the notes exported from this chat")
     msg.delete()
+    update.effective_message.reply_text("All notes exported. You can now import them using the same bot on a separated server or in a separated chat.")
 
 @run_async
 @user_bot_owner
