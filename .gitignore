@@ -1,5 +1,19 @@
+# Exclude personal configs
 tg_bot/config.py
+
+# Logs
+logfile
+tg_bot.session
+tg_bot.session-journal
+
+# venv setups
+venv/
+
+# backup and pycache
+*.backup
 *.pyc
+
+# Hidden folders unrelated to botcode
 .idea/
 .project
 .pydevproject
