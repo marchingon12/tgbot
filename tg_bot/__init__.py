@@ -1,31 +1,39 @@
 import logging
 import os
 import sys
-
+from telethon import TelegramClient
 import telegram.ext as tg
 
 # enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO)
+    level=logging.INFO,
+)
+
+# set APS logs to warning mode to avoid logspams
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 LOGGER = logging.getLogger(__name__)
 
+LOGGER.info("Khaleesi woke up!")
+
 # if version < 3.6, stop bot.
 if sys.version_info[0] < 3 or sys.version_info[1] < 6:
-    LOGGER.error("You MUST have a python version of at least 3.6! Multiple features depend on this. Bot quitting.")
+    LOGGER.error(
+        "You MUST have a python version of at least 3.6! Multiple features depend on this. Bot quitting."
+    )
     quit(1)
 
-ENV = bool(os.environ.get('ENV', False))
+ENV = bool(os.environ.get("ENV", False))
 
 if ENV:
-    TOKEN = os.environ.get('TOKEN', None)
+    TOKEN = os.environ.get("TOKEN", None)
     try:
-        OWNER_ID = int(os.environ.get('OWNER_ID', None))
+        OWNER_ID = int(os.environ.get("OWNER_ID", None))
     except ValueError:
         raise Exception("Your OWNER_ID env variable is not a valid integer.")
 
-    MESSAGE_DUMP = os.environ.get('MESSAGE_DUMP', None)
+    MESSAGE_DUMP = os.environ.get("MESSAGE_DUMP", None)
     OWNER_USERNAME = os.environ.get("OWNER_USERNAME", None)
 
     try:
@@ -39,35 +47,45 @@ if ENV:
         raise Exception("Your support users list does not contain valid integers.")
 
     try:
-        WHITELIST_USERS = set(int(x) for x in os.environ.get("WHITELIST_USERS", "").split())
+        WHITELIST_USERS = set(
+            int(x) for x in os.environ.get("WHITELIST_USERS", "").split()
+        )
     except ValueError:
         raise Exception("Your whitelisted users list does not contain valid integers.")
     try:
-        WHITELIST_CHATS = set(int(x) for x in os.environ.get("WHITELIST_CHATS", "").split())
+        WHITELIST_CHATS = set(
+            int(x) for x in os.environ.get("WHITELIST_CHATS", "").split()
+        )
     except ValueError:
         raise Exception("Your whitelisted users list does not contain valid integers.")
     try:
-        BLACKLIST_CHATS = set(int(x) for x in os.environ.get("BLACKLIST_CHATS", "").split())
+        BLACKLIST_CHATS = set(
+            int(x) for x in os.environ.get("BLACKLIST_CHATS", "").split()
+        )
     except ValueError:
-        raise Exception("Your whitelisted users list does not contain valid integers.")
+        raise Exception("Your blacklisted users list does not contain valid integers.")
 
-    WEBHOOK = bool(os.environ.get('WEBHOOK', False))
-    URL = os.environ.get('URL', "")  # Does not contain token
-    PORT = int(os.environ.get('PORT', 5000))
+    WEBHOOK = bool(os.environ.get("WEBHOOK", False))
+    URL = os.environ.get("URL", "")  # Does not contain token
+    PORT = int(os.environ.get("PORT", 5000))
     CERT_PATH = os.environ.get("CERT_PATH")
 
-    DB_URI = os.environ.get('DATABASE_URL')
-    DONATION_LINK = os.environ.get('DONATION_LINK')
+    DB_URI = os.environ.get("DATABASE_URL")
+    DONATION_LINK = os.environ.get("DONATION_LINK")
     LOAD = os.environ.get("LOAD", "").split()
-    NO_LOAD = os.environ.get("NO_LOAD", "translation").split()
-    DEL_CMDS = bool(os.environ.get('DEL_CMDS', False))
-    STRICT_GBAN = bool(os.environ.get('STRICT_GBAN', False))
-    WORKERS = int(os.environ.get('WORKERS', 8))
-    BAN_STICKER = os.environ.get('BAN_STICKER', 'CAADAgADOwADPPEcAXkko5EB3YGYAg')
-    ALLOW_EXCL = os.environ.get('ALLOW_EXCL', False)
+    NO_LOAD = os.environ.get("NO_LOAD", "").split()
+    DEL_CMDS = bool(os.environ.get("DEL_CMDS", False))
+    STRICT_GBAN = bool(os.environ.get("STRICT_GBAN", False))
+    WORKERS = int(os.environ.get("WORKERS", 8))
+    BAN_STICKER = os.environ.get("BAN_STICKER", "CAADAgADOwADPPEcAXkko5EB3YGYAg")
+    CUSTOM_CMD = os.environ.get("CUSTOM_CMD", False)
+    TELETHON_ID = int(os.environ.get("TL_APP_ID", None))
+    TELETHON_HASH = os.environ.get("TL_HASH", None)
+    CLEAN_UPDATE = os.environ.get("CLEAN_UPDATE", None)
 
 else:
     from tg_bot.config import Development as Config
+
     TOKEN = Config.API_KEY
     try:
         OWNER_ID = int(Config.OWNER_ID)
@@ -94,11 +112,11 @@ else:
     try:
         WHITELIST_CHATS = set(int(x) for x in Config.WHITELIST_CHATS or [])
     except ValueError:
-        raise Exception("Your whitelisted chats list does not contain valid integers.")
+        raise Exception("Your whitelisted users list does not contain valid integers.")
     try:
         BLACKLIST_CHATS = set(int(x) for x in Config.BLACKLIST_CHATS or [])
     except ValueError:
-        raise Exception("Your blacklisted chats list does not contain valid integers.")
+        raise Exception("Your blacklisted users list does not contain valid integers.")
 
     WEBHOOK = Config.WEBHOOK
     URL = Config.URL
@@ -113,11 +131,18 @@ else:
     STRICT_GBAN = Config.STRICT_GBAN
     WORKERS = Config.WORKERS
     BAN_STICKER = Config.BAN_STICKER
-    ALLOW_EXCL = Config.ALLOW_EXCL
-
+    # ALLOW_EXCL = Config.ALLOW_EXCL
+    CUSTOM_CMD = Config.CUSTOM_CMD
+    TELETHON_HASH = Config.TELETHON_HASH
+    TELETHON_ID = Config.TELETHON_ID
+    CLEAN_UPDATE = Config.CLEAN_UPDATE
 
 SUDO_USERS.add(OWNER_ID)
-SUDO_USERS.add(254318997)
+
+# Telethon
+api_id = TELETHON_ID
+api_hash = TELETHON_HASH
+client = TelegramClient("tg_bot", api_id, api_hash)
 
 updater = tg.Updater(TOKEN, workers=WORKERS)
 
@@ -128,10 +153,7 @@ WHITELIST_USERS = list(WHITELIST_USERS)
 SUPPORT_USERS = list(SUPPORT_USERS)
 
 # Load at end to ensure all prev variables have been set
-from tg_bot.modules.helper_funcs.handlers import CustomCommandHandler, CustomRegexHandler
+from tg_bot.modules.helper_funcs.handlers import CustomCommandHandler
 
-# make sure the regex handler can take extra kwargs
-tg.RegexHandler = CustomRegexHandler
-
-if ALLOW_EXCL:
+if CUSTOM_CMD and len(CUSTOM_CMD) >= 1:
     tg.CommandHandler = CustomCommandHandler
